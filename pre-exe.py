@@ -1,4 +1,5 @@
 import pandas as pd
+from cnn import *
 
 def get_data():
     df = pd.read_csv("train.csv")
@@ -6,6 +7,6 @@ def get_data():
     df = df[columns]
     return df
 
-
 if __name__ == "__main__":
-    get_data()
+    df = get_data()
+    
