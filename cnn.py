@@ -3,6 +3,7 @@ import tensorflow as tf
 class Cnn(object):
     def __init__(self, sequence_length, vocab_size, embedding_size,
                  filter_sizes, num_filters):
+        self.label = tf.placeholder(tf.bool, [None], name = "label")
         self.input_sentence_a = tf.placeholder(tf.int32, [None, sequence_length], name = "input_a")
         self.input_sentence_b = tf.placeholder(tf.int32, [None, sequence_length], name = "input_b")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
@@ -51,21 +52,28 @@ class Cnn(object):
                     pooled_outputs_a.append(pooled_a)
                     pooled_outputs_b.append(pooled_b)
 
-                    print (pooled_a)
-                    print (pooled_b)
 
         num_filters_total = num_filters * len(filter_sizes)
         self.h_pool_a = tf.concat(pooled_outputs_a, 3)
         self.h_pool_b = tf.concat(pooled_outputs_b, 3)
         self.h_pool_flat_a = tf.reshape(self.h_pool_a, [-1, num_filters_total])
         self.h_pool_flat_b = tf.reshape(self.h_pool_b, [-1, num_filters_total])
-        
-        self.norm_a = tf.sqrt(tf.reduce_sum(tf.square(self.h_pool_flat_a), axis = 2))
-        self.norm_b = tf.sqrt(tf.reduce_sum(tf.square(self.h_pool_flat_b), axis = 2))
-        self.amulb = tf.
 
-cnn = Cnn(sequence_length = 35,
-          vocab_size = 1000,
-          embedding_size = 50,
-          filter_sizes = [2, 3, 4],
-          num_filters = 10)
+        self.norm_a = tf.norm(self.h_pool_flat_a, ord=2)
+        self.norm_b = tf.norm(self.h_pool_flat_b, ord=2)
+        self.adotb = tf.tensordot(self.h_pool_flat_a, self.h_pool_flat_b, axes=1)
+        self.result = tf.divide(self.adotb, self.norm_a * self.norm_b)
+
+        with tf.name_scope("loss"):
+            self.loss = tf.nn.softmax_cross_entropy_with_logits(logits = self.result, labels = self.label)
+
+        # Accuracy
+        # with tf.name_scope("accuracy"):
+        #     correct_predictions = tf.equal(self.label, tf.argmax(self.result, 1))
+        #     self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+
+cnn = Cnn(sequence_length=35,
+          vocab_size=1000,
+          embedding_size=50,
+          filter_sizes=[2, 3, 4],
+          num_filters=10)
