@@ -4,7 +4,7 @@ import tensorflow as tf
 class Cnn(object):
     def __init__(self, sequence_length, vocab_size, embedding_size,
                  filter_sizes, num_filters, num_classes):
-        self.label = tf.placeholder(tf.bool, [None, num_classes], name="label")
+        self.label = tf.placeholder(tf.float16, [None, num_classes], name="label")
         self.input_sentence_a = tf.placeholder(tf.int32, [None, sequence_length], name="input_a")
         self.input_sentence_b = tf.placeholder(tf.int32, [None, sequence_length], name="input_b")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
@@ -75,6 +75,7 @@ class Cnn(object):
             self.mul_a = tf.nn.xw_plus_b(self.h_pool_flat_a, Wa, ba)
             self.mul_b = tf.nn.xw_plus_b(self.h_pool_flat_b, Wb, bb)
             self.result = tf.add(self.mul_a, self.mul_b)
+            self.predictions = tf.argmax(self.result, 1, name="predictions")
 
             print_all = [Wa, Wb, self.mul_a, self.mul_b, self.result]
             for tensor in print_all:
@@ -85,9 +86,9 @@ class Cnn(object):
 
 
         # Accuracy
-        # with tf.name_scope("accuracy"):
-        #     correct_predictions = tf.equal(self.label, tf.argmax(self.result, 1))
-        #     self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+        with tf.name_scope("accuracy"):
+            correct_predictions = tf.equal(self.predictions, tf.argmax(self.label, 1))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
 # cnn = Cnn(sequence_length=35,
 #           vocab_size=1000,

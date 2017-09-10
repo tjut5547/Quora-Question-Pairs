@@ -11,6 +11,7 @@ from tensorflow.contrib import learn
 import matplotlib.pyplot as plt
 
 global_loss = []
+global_accuracy = []
 
 with tf.Graph().as_default():
     session_conf = tf.ConfigProto(
@@ -39,16 +40,17 @@ with tf.Graph().as_default():
                 cnn.input_sentence_b: b_batch,
                 cnn.label : label
             }
-            _, step, loss = sess.run([optimizer, global_step, cnn.loss], feed_dict=feed_dict)
+            _, step, loss, accuracy = sess.run([optimizer, global_step, cnn.loss, cnn.accuracy], feed_dict=feed_dict)
             time_str = datetime.datetime.now().isoformat()
-            print("{}: step {}, loss {:g}".format(time_str, step, loss))
+            print("{}: step {}, loss {:g}, accuracy {}".format(time_str, step, loss, accuracy))
             global_loss.append(loss)
+            global_accuracy.append(accuracy)
 
         def dev_step(a_batch, b_batch, label):
             feed_dict = {
                 cnn.input_sentence_a: a_batch,
                 cnn.input_sentence_b: b_batch,
-                cnn.label : label
+                cnn.label: label
             }
             step, loss = sess.run([global_step, cnn.loss], feed_dict=feed_dict)
             time_str = datetime.datetime.now().isoformat()
@@ -71,8 +73,15 @@ with tf.Graph().as_default():
 
         x = list(range(len(global_loss)))
         y = global_loss
-        print (y)
         plt.plot(x, y, 'r', label="loss")
         plt.xlabel("batches")
         plt.ylabel("loss")
         plt.savefig("loss_modify.png")
+        plt.close()
+
+        plt.plot(x, global_accuracy, 'b', label="accuracy")
+        plt.xlabel("batches")
+        plt.ylabel("accuracy")
+        plt.savefig("accuracy.png")
+        plt.close()
+
