@@ -21,19 +21,18 @@ with tf.Graph().as_default():
     sess = tf.Session(config=session_conf)
     with sess.as_default():
         cnn = Cnn(sequence_length=50,
-                  vocab_size=24000,
+                  vocab_size=12579,
                   embedding_size=128,
-                  filter_sizes=[2, 3, 4, 5],
+                  filter_sizes=[1, 2, 3, 4, 5],
                   num_filters=128,
                   num_classes=2)
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(0.0005).minimize(cnn.loss, global_step=global_step)
+        optimizer = tf.train.AdamOptimizer(0.0008).minimize(cnn.loss, global_step=global_step)
         # grads_and_vars = optimizer.compute_gradients(cnn.loss)
         # train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
         # global_step : 每一轮参数值的更新之后就会增加1
 
         sess.run(tf.global_variables_initializer())
-
         def train_step(a_batch, b_batch, label):
             feed_dict = {
                 cnn.input_sentence_a: a_batch,
@@ -56,20 +55,26 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}".format(time_str, step, loss))
 
-        batches = get_batch(500)
+        batches = get_batch(400)
         for data in batches:
             print(datetime.datetime.now().isoformat())
             x_train, y_train = zip(*data)
-            x_train_a = [a for a, b in x_train]
-            x_train_b = [b for a, b in x_train]
+            x_train_a = np.array([a for a, b in x_train])
+            x_train_b = np.array([b for a, b in x_train])
+            print("********************************************")
+            print(x_train_a[10], x_train_b[10], y_train[10])
+            print(x_train[10], y_train[10])
+            print("********************************************")
             y_train = [((1 + label[0]) % 2, (0 + label[0]) % 2) for label in y_train]
-
             train_step(x_train_a, x_train_b, y_train)
             current_step = tf.train.global_step(sess, global_step)
             # if current_step % 100 == 0:
             #     print("\nEvaluation:")
             #     dev_step(x_train_a, x_train_b, y_train)#, writer=dev_summary_writer)
             #     print("")
+
+        Saver = tf.train.Saver()
+        Saver.save(sess=sess, save_path="./model/model.ckpt")
 
         x = list(range(len(global_loss)))
         y = global_loss
@@ -84,4 +89,20 @@ with tf.Graph().as_default():
         plt.ylabel("accuracy")
         plt.savefig("accuracy.png")
         plt.close()
+
+        # data = get_test_data()
+        # print("*****************************************")
+        # x_train_a = [a for a, b in data]
+        # x_train_b = [b for a, b in data]
+        # print(x_train_a[0])
+        # print("*****************************************")
+        # feed_dict = {
+        #     cnn.input_sentence_a: x_train_a,
+        #     cnn.input_sentence_b: x_train_b,
+        # }
+        # result = sess.run([cnn.result], feed_dict=feed_dict)
+        # print(type(result))
+        # print(len(result))
+        # print(result[1])
+
 
