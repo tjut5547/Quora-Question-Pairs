@@ -77,13 +77,18 @@ class Cnn(object):
             self.result = tf.add(self.mul_a, self.mul_b)
             self.predictions = tf.argmax(self.result, 1, name="predictions")
 
-            print_all = [Wa, Wb, self.mul_a, self.mul_b, self.result]
-            for tensor in print_all:
-                print (tensor)
+            l2_loss += tf.nn.l2_loss(Wa)
+            l2_loss += tf.nn.l2_loss(Wb)
+            l2_loss += tf.nn.l2_loss(ba)
+            l2_loss += tf.nn.l2_loss(bb)
+
+            # print_all = [Wa, Wb, self.mul_a, self.mul_b, self.result]
+            # for tensor in print_all:
+            #     print (tensor)
 
         with tf.name_scope("loss"):
-            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.result, labels=self.label))
-
+            self.losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.result, labels=self.label)
+            self.loss = tf.reduce_mean(self.losses) + 0.3 * l2_loss
 
         # Accuracy
         with tf.name_scope("accuracy"):

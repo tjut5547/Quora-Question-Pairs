@@ -21,19 +21,18 @@ with tf.Graph().as_default():
     sess = tf.Session(config=session_conf)
     with sess.as_default():
         cnn = Cnn(sequence_length=50,
-                  vocab_size=24000,
+                  vocab_size=12579,
                   embedding_size=128,
-                  filter_sizes=[2, 3, 4, 5],
+                  filter_sizes=[1, 2, 3, 4, 5],
                   num_filters=128,
                   num_classes=2)
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(0.0005).minimize(cnn.loss, global_step=global_step)
+        optimizer = tf.train.AdamOptimizer(0.0008).minimize(cnn.loss, global_step=global_step)
         # grads_and_vars = optimizer.compute_gradients(cnn.loss)
         # train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
         # global_step : 每一轮参数值的更新之后就会增加1
 
         sess.run(tf.global_variables_initializer())
-
         def train_step(a_batch, b_batch, label):
             feed_dict = {
                 cnn.input_sentence_a: a_batch,
@@ -56,7 +55,7 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}".format(time_str, step, loss))
 
-        batches = get_batch(500)
+        batches = get_batch(400)
         for data in batches:
             print(datetime.datetime.now().isoformat())
             x_train, y_train = zip(*data)
@@ -70,6 +69,9 @@ with tf.Graph().as_default():
             #     print("\nEvaluation:")
             #     dev_step(x_train_a, x_train_b, y_train)#, writer=dev_summary_writer)
             #     print("")
+
+        Saver = tf.train.Saver()
+        Saver.save(sess=sess, save_path="./model/cnn.model")
 
         x = list(range(len(global_loss)))
         y = global_loss
