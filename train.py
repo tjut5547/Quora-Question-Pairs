@@ -25,7 +25,8 @@ with tf.Graph().as_default():
                   embedding_size=128,
                   filter_sizes=[1, 2, 3, 4, 5],
                   num_filters=128,
-                  num_classes=2)
+                  num_classes=2,
+                  num_sample=200)
         global_step = tf.Variable(0, name="global_step", trainable=False)
         optimizer = tf.train.AdamOptimizer(0.0008).minimize(cnn.loss, global_step=global_step)
         # grads_and_vars = optimizer.compute_gradients(cnn.loss)
@@ -39,7 +40,10 @@ with tf.Graph().as_default():
                 cnn.input_sentence_b: b_batch,
                 cnn.label : label
             }
-            _, step, loss, accuracy = sess.run([optimizer, global_step, cnn.loss, cnn.accuracy], feed_dict=feed_dict)
+            _, step, loss, accuracy, result = sess.run([optimizer, global_step, cnn.loss, cnn.accuracy, cnn.result], feed_dict=feed_dict)
+
+            print(result)
+
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, accuracy {}".format(time_str, step, loss, accuracy))
             global_loss.append(loss)
@@ -55,17 +59,13 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}".format(time_str, step, loss))
 
-        batches = get_batch(400)
+        batches = get_batch(200)
         for data in batches:
             print(datetime.datetime.now().isoformat())
             x_train, y_train = zip(*data)
             x_train_a = np.array([a for a, b in x_train])
             x_train_b = np.array([b for a, b in x_train])
-            print("********************************************")
-            print(x_train_a[10], x_train_b[10], y_train[10])
-            print(x_train[10], y_train[10])
-            print("********************************************")
-            y_train = [((1 + label[0]) % 2, (0 + label[0]) % 2) for label in y_train]
+            y_train = [label[0] for label in y_train]
             train_step(x_train_a, x_train_b, y_train)
             current_step = tf.train.global_step(sess, global_step)
             # if current_step % 100 == 0:
@@ -75,7 +75,6 @@ with tf.Graph().as_default():
 
         Saver = tf.train.Saver()
         Saver.save(sess=sess, save_path="./model/model.ckpt")
-
         x = list(range(len(global_loss)))
         y = global_loss
         plt.plot(x, y, 'r', label="loss")

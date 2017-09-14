@@ -3,8 +3,8 @@ import tensorflow as tf
 
 class Cnn(object):
     def __init__(self, sequence_length, vocab_size, embedding_size,
-                 filter_sizes, num_filters, num_classes):
-        self.label = tf.placeholder(tf.float16, [None, num_classes], name="label")
+                 filter_sizes, num_filters, num_classes, num_sample):
+        self.label = tf.placeholder(tf.float32, [None], name="label")
         self.input_sentence_a = tf.placeholder(tf.int32, [None, sequence_length], name="input_a")
         self.input_sentence_b = tf.placeholder(tf.int32, [None, sequence_length], name="input_b")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
@@ -28,11 +28,11 @@ class Cnn(object):
                 filter_size * embedding_size * 1 : 长 * 宽 * channel
                 num_filters : 卷积核个数
                 '''
-                Wa = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="Wa")
+                # Wa = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="Wa")
                 Wb = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="Wb")
                 ba = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="ba")
                 bb = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="bb")
-                conv_a = tf.nn.conv2d(self.embedded_chars_a_expand, Wa,
+                conv_a = tf.nn.conv2d(self.embedded_chars_a_expand, Wb,
                                       strides=[1, 1, 1, 1], padding="VALID")
                 conv_b = tf.nn.conv2d(self.embedded_chars_b_expand, Wb,
                                       strides=[1, 1, 1, 1], padding="VALID")
@@ -59,45 +59,25 @@ class Cnn(object):
         self.h_pool_flat_a = tf.reshape(self.h_pool_a, [-1, num_filters_total])
         self.h_pool_flat_b = tf.reshape(self.h_pool_b, [-1, num_filters_total])
 
-        '''
-        self.norm_a = tf.sqrt(tf.reduce_sum(tf.multiply(self.h_pool_flat_a, self.h_pool_flat_a), 1))
-        self.norm_b = tf.sqrt(tf.reduce_sum(tf.multiply(self.h_pool_flat_b, self.h_pool_flat_b), 1))
-        self.adotb = tf.sqrt(tf.reduce_sum(tf.multiply(self.h_pool_flat_a, self.h_pool_flat_b), 1))
-        self.anormb = self.norm_a * self.norm_b
-        self.result = tf.divide(self.adotb, self.anormb)
-        '''
-
         with tf.name_scope("output"):
-            Wa = tf.Variable(tf.truncated_normal(shape=[num_filters_total, num_classes], stddev=0.1), name="Wa")
-            Wb = tf.Variable(tf.truncated_normal(shape=[num_filters_total, num_classes], stddev=0.1), name="Wa")
-            ba = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="ba")
-            bb = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="bb")
-            self.mul_a = tf.nn.xw_plus_b(self.h_pool_flat_a, Wa, ba)
-            self.mul_b = tf.nn.xw_plus_b(self.h_pool_flat_b, Wb, bb)
-            self.result = tf.add(self.mul_a, self.mul_b)
-            self.predictions = tf.argmax(self.result, 1, name="predictions")
-
-            l2_loss += tf.nn.l2_loss(Wa)
-            l2_loss += tf.nn.l2_loss(Wb)
-            l2_loss += tf.nn.l2_loss(ba)
-            l2_loss += tf.nn.l2_loss(bb)
-
-            # print_all = [Wa, Wb, self.mul_a, self.mul_b, self.result]
-            # for tensor in print_all:
-            #     print (tensor)
+            self.norm_a = tf.nn.l2_normalize(self.h_pool_flat_a, dim=1)
+            self.norm_b = tf.nn.l2_normalize(self.h_pool_flat_b, dim=1)
+            self.const = tf.constant(num_sample * [0.999999], dtype=tf.float32)
+            self.result = tf.add(tf.reduce_sum(tf.multiply(self.norm_a, self.norm_b), 1), self.const)
+            self.predictions = tf.cast(tf.cast(self.result, tf.int32), tf.float32)
 
         with tf.name_scope("loss"):
-            self.losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.result, labels=self.label)
-            self.loss = tf.reduce_mean(self.losses) + 0.3 * l2_loss
+            self.loss = tf.losses.log_loss(predictions=self.result, labels=self.label)
 
         # Accuracy
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(self.predictions, tf.argmax(self.label, 1))
+            correct_predictions = tf.equal(self.predictions, self.label)
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
-# cnn = Cnn(sequence_length=35,
-#           vocab_size=1000,
-#           embedding_size=50,
-#           filter_sizes=[1, 2, 3, 4, 5],
-#           num_filters=10,
-#           num_classes=2)
+cnn = Cnn(sequence_length=35,
+          vocab_size=1000,
+          embedding_size=50,
+          filter_sizes=[1, 2, 3, 4, 5],
+          num_filters=10,
+          num_classes=2,
+          num_sample=10)
