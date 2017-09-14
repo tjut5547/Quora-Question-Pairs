@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 global_loss = []
 global_accuracy = []
 
+
+
 with tf.Graph().as_default():
     session_conf = tf.ConfigProto(
         allow_soft_placement=True,
@@ -23,7 +25,7 @@ with tf.Graph().as_default():
         cnn = Cnn(sequence_length=50,
                   vocab_size=12579,
                   embedding_size=128,
-                  filter_sizes=[1, 2, 3, 4, 5],
+                  filter_sizes=[1, 2, 3, 4, 5, 6, 7],
                   num_filters=128,
                   num_classes=2)
         global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -61,10 +63,6 @@ with tf.Graph().as_default():
             x_train, y_train = zip(*data)
             x_train_a = np.array([a for a, b in x_train])
             x_train_b = np.array([b for a, b in x_train])
-            print("********************************************")
-            print(x_train_a[10], x_train_b[10], y_train[10])
-            print(x_train[10], y_train[10])
-            print("********************************************")
             y_train = [((1 + label[0]) % 2, (0 + label[0]) % 2) for label in y_train]
             train_step(x_train_a, x_train_b, y_train)
             current_step = tf.train.global_step(sess, global_step)
@@ -75,7 +73,6 @@ with tf.Graph().as_default():
 
         Saver = tf.train.Saver()
         Saver.save(sess=sess, save_path="./model/model.ckpt")
-
         x = list(range(len(global_loss)))
         y = global_loss
         plt.plot(x, y, 'r', label="loss")
@@ -90,19 +87,15 @@ with tf.Graph().as_default():
         plt.savefig("accuracy.png")
         plt.close()
 
-        # data = get_test_data()
-        # print("*****************************************")
-        # x_train_a = [a for a, b in data]
-        # x_train_b = [b for a, b in data]
-        # print(x_train_a[0])
-        # print("*****************************************")
-        # feed_dict = {
-        #     cnn.input_sentence_a: x_train_a,
-        #     cnn.input_sentence_b: x_train_b,
-        # }
-        # result = sess.run([cnn.result], feed_dict=feed_dict)
-        # print(type(result))
-        # print(len(result))
-        # print(result[1])
-
-
+        data = pickle.load(open("./data/test_data.pkl", "rb"))
+        x_train_a = [a for a, b in data]
+        x_train_b = [b for a, b in data]
+        feed_dict = {
+            cnn.input_sentence_a: x_train_a,
+            cnn.input_sentence_b: x_train_b,
+        }
+        result = sess.run([cnn.predictions], feed_dict=feed_dict)
+        pickle.dump((result), open('./data/result.pkl', 'rb'))
+        print(type(result))
+        print(len(result))
+        print(result[1])
